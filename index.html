@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TD Five Boro Bike Tour — Straight or Curved?</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <h1>🚲 Straight or Curved? Riding the Math of the Five Boro Bike Tour</h1>
+  <p class="subtitle">Explore the real 2026 TD Five Boro Bike Tour route through New York City's five boroughs — every straight stretch is a <strong>linear</strong> equation, every broad bend is a <strong>quadratic</strong> one.</p>
+</header>
+
+<main class="app-main">
+
+  <section class="map-panel">
+    <div class="map-legend">
+      <span class="legend-item"><span class="swatch swatch-linear"></span> Straight (linear)</span>
+      <span class="legend-item"><span class="swatch swatch-quadratic"></span> Curved (quadratic)</span>
+      <span class="legend-item"><span class="swatch swatch-selection"></span> Your selection</span>
+      <span class="legend-item legend-bridge">🌉 Bridge</span>
+    </div>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="routeCanvas"></canvas>
+      <canvas id="overlayCanvas"></canvas>
+      <div id="hoverTooltip" class="hover-tooltip" hidden></div>
+    </div>
+
+    <p class="map-hint">Click anywhere on the route to set the <strong>nearer</strong> handle (start or end) — or drag the sliders below. Try clicking near the colored stretches to feel the difference between a straight avenue and a bridge ramp.</p>
+  </section>
+
+  <section class="control-panel">
+    <h2>Pick a stretch of the route</h2>
+
+    <div class="mile-ruler-wrap">
+      <div class="mile-ruler-track" id="rulerTrack"></div>
+      <input type="range" id="startSlider" class="range-input range-start" min="0" step="0.01">
+      <input type="range" id="endSlider" class="range-input range-end" min="0" step="0.01">
+      <div class="ruler-labels"><span>Mile 0</span><span id="rulerMaxLabel">Mile 40</span></div>
+    </div>
+
+    <dl class="selection-stats">
+      <div><dt>Start</dt><dd id="statStart">—</dd></div>
+      <div><dt>End</dt><dd id="statEnd">—</dd></div>
+      <div><dt>Distance</dt><dd id="statDistance">—</dd></div>
+      <div><dt>Borough(s)</dt><dd id="statBorough">—</dd></div>
+    </dl>
+
+    <p id="validationMsg" class="validation-msg"></p>
+
+    <div class="button-row">
+      <button id="animateBtn" class="btn btn-primary" disabled>▶ Ride this stretch</button>
+      <button id="resetBtn" class="btn btn-secondary">Reset</button>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  Route data: the official 2026 TD Five Boro Bike Tour course, published on RideWithGPS
+  (<a href="https://ridewithgps.com/routes/54531554" target="_blank" rel="noopener">route 54531554</a>).
+  All 6,235 route points, auto-classified into straight and curved sections for this lesson.
+</footer>
+
+<!-- Socratic "What do you notice?" modal -- one question per popup -->
+<dialog id="noticeModal" class="modal">
+  <form method="dialog" class="modal-form">
+    <h2>🤔 What do you notice?</h2>
+    <p class="notice-progress" id="noticeProgress"></p>
+    <div id="noticeQuestions" class="socratic-questions"></div>
+    <div id="reflectionWrap">
+      <label class="reflection-label" for="reflectionInput">Your answer (not graded, just for thinking):</label>
+      <textarea id="reflectionInput" rows="3" placeholder="Type your answer here..."></textarea>
+    </div>
+    <div class="button-row">
+      <button type="submit" class="btn btn-primary" id="noticeContinueBtn">Next →</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Linear vs Quadratic quiz modal -->
+<dialog id="quizModal" class="modal">
+  <div class="modal-form">
+    <h2>📐 Linear or Quadratic?</h2>
+    <p>Look at the stretch you highlighted on the map. Based on what you noticed, is the path this segment traces best modeled by a <strong>linear</strong> function or a <strong>quadratic</strong> function?</p>
+    <div class="button-row quiz-buttons">
+      <button class="btn btn-choice" data-choice="linear">y = mx + b <br><small>Linear (straight)</small></button>
+      <button class="btn btn-choice" data-choice="quadratic">y = ax² + bx + c <br><small>Quadratic (curved)</small></button>
+    </div>
+    <p id="quizFeedback" class="quiz-feedback" hidden></p>
+    <div class="button-row">
+      <button class="btn btn-primary" id="quizContinueBtn" hidden>See the equation →</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Equation & explanation panel -->
+<dialog id="equationModal" class="modal modal-wide">
+  <div class="modal-form">
+    <h2 id="equationTitle">The Equation</h2>
+    <div class="equation-display" id="equationDisplay"></div>
+    <div class="equation-meta" id="equationMeta"></div>
+    <h3>How we built this equation</h3>
+    <p id="equationExplanation" class="equation-explanation"></p>
+    <h3>The variables of this equation</h3>
+    <p id="equationVariables" class="equation-explanation"></p>
+    <div class="button-row">
+      <button class="btn btn-secondary" id="equationCloseBtn">Close</button>
+      <button class="btn btn-primary" id="tryAnotherBtn">Try another stretch</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
