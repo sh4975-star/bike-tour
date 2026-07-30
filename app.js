@@ -488,8 +488,25 @@
     const m = Math.abs(denom) > 1e-12 ? (n * sUV - sU * sV) / denom : 0;
     const b = (sV - m * sU) / n;
     const pred = u.map((ui) => m * ui + b);
-    const { r2, rmse } = fitQuality(v, pred);
-    return { m, b, r2, rmse };
+    const { rmse } = fitQuality(v, pred);
+    // The Pearson correlation coefficient r between u and v -- the standard,
+    // signed measure of linear association (this *is* r, not R^2 = r^2).
+    const r = pearsonR(u, v);
+    return { m, b, r, rmse };
+  }
+
+  function pearsonR(xs, ys) {
+    const n = xs.length;
+    let mx = 0, my = 0;
+    for (let i = 0; i < n; i++) { mx += xs[i]; my += ys[i]; }
+    mx /= n; my /= n;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) {
+      const dx = xs[i] - mx, dy = ys[i] - my;
+      sxy += dx * dy; sxx += dx * dx; syy += dy * dy;
+    }
+    const denom = Math.sqrt(sxx * syy);
+    return denom > 1e-12 ? sxy / denom : 0;
   }
 
   function polyfit2(u, v) {
@@ -508,7 +525,14 @@
     const [a, b, c] = solve3x3(A, rhs);
     const pred = u.map((ui) => a * ui * ui + b * ui + c);
     const { r2, rmse } = fitQuality(v, pred);
-    return { a, b, c, r2, rmse };
+    // Pearson r is only strictly defined for a LINEAR association, so for a
+    // quadratic fit we report the "multiple correlation coefficient" instead:
+    // r = correlation(actual, predicted), which is always >= 0 and satisfies
+    // r^2 == the same variance-explained fraction R^2 would have given, for
+    // any least-squares fit (linear or not) -- the standard generalization of
+    // "r" beyond simple linear regression.
+    const r = Math.sqrt(Math.max(0, r2));
+    return { a, b, c, r, rmse };
   }
 
   function det3(m) {
@@ -758,19 +782,19 @@
     const uMin = Math.min(...fit.u), uMax = Math.max(...fit.u);
 
     if (type === 'linear') {
-      const { m, b, r2, rmse } = fit.lin;
+      const { m, b, r, rmse } = fit.lin;
       title.textContent = `Linear Equation — Mile ${sel.lo.toFixed(2)} to ${sel.hi.toFixed(2)}`;
       eqDisplay.innerHTML = `y = ${m.toFixed(4)}x ${signedTerm(b)}`;
-      eqMeta.innerHTML = `<span><b>R²</b> = ${r2.toFixed(3)}</span><span><b>Typical deviation</b> ≈ ${(rmse * 5280).toFixed(1)} ft</span><span><b>Points used</b> = ${fit.n}</span>`;
-      const { built, variables } = explainLinear(sel, fit.n, m, b, rmse * 5280, dir, compass, originLat, originLon);
+      eqMeta.innerHTML = `<span><b>r</b> = ${r.toFixed(3)}</span><span><b>Typical deviation</b> ≈ ${(rmse * 5280).toFixed(1)} ft</span><span><b>Points used</b> = ${fit.n}</span>`;
+      const { built, variables } = explainLinear(sel, fit.n, m, b, r, rmse * 5280, dir, compass, originLat, originLon);
       eqExplain.textContent = built;
       eqVariables.textContent = variables;
     } else {
-      const { a, b, c, r2, rmse } = fit.quad;
+      const { a, b, c, r, rmse } = fit.quad;
       title.textContent = `Quadratic Equation — Mile ${sel.lo.toFixed(2)} to ${sel.hi.toFixed(2)}`;
       eqDisplay.innerHTML = `y = ${a.toFixed(4)}x² ${signedTerm(b)}x ${signedTerm(c)}`;
-      eqMeta.innerHTML = `<span><b>R²</b> = ${r2.toFixed(3)}</span><span><b>Typical deviation</b> ≈ ${(rmse * 5280).toFixed(1)} ft</span><span><b>Points used</b> = ${fit.n}</span>`;
-      const { built, variables } = explainQuadratic(sel, fit.n, a, b, c, r2, rmse * 5280, dir, compass, originLat, originLon, uMin, uMax);
+      eqMeta.innerHTML = `<span><b>r</b> = ${r.toFixed(3)}</span><span><b>Typical deviation</b> ≈ ${(rmse * 5280).toFixed(1)} ft</span><span><b>Points used</b> = ${fit.n}</span>`;
+      const { built, variables } = explainQuadratic(sel, fit.n, a, b, c, r, rmse * 5280, dir, compass, originLat, originLon, uMin, uMax);
       eqExplain.textContent = built;
       eqVariables.textContent = variables;
     }
@@ -780,8 +804,9 @@
 
   function signedTerm(v) { return (v >= 0 ? '+ ' : '- ') + Math.abs(v).toFixed(4); }
 
-  function explainLinear(sel, n, m, b, rmseFt, dir, compass, originLat, originLon) {
+  function explainLinear(sel, n, m, b, r, rmseFt, dir, compass, originLat, originLon) {
     const driftFt = Math.abs(m) * 5280;
+    const strength = Math.abs(r) >= 0.9 ? 'very strong' : Math.abs(r) >= 0.7 ? 'strong' : Math.abs(r) >= 0.4 ? 'moderate' : 'weak';
     const built = `You highlighted mile ${sel.lo.toFixed(2)} to mile ${sel.hi.toFixed(2)} of the route (${n} recorded GPS points). `
       + `To build this equation we converted every GPS point in your stretch from latitude/longitude into flat x-y coordinates measured in miles, `
       + `then rotated that coordinate grid so a new x-axis points along this stretch's own direction of travel: compass heading ${compass.toFixed(0)}° (${dir}), `
@@ -789,12 +814,14 @@
       + `sideways position y against distance-traveled x gives y = ${m.toFixed(4)}x ${signedTerm(b)}. `;
     const variables = `The slope m = ${m.toFixed(4)} means the path drifts about `
       + `${driftFt.toFixed(1)} feet ${m > 0 ? 'left' : 'right'} of straight-ahead for every mile ridden — close to zero, the hallmark of a straight road. `
-      + `The intercept b is forced close to 0 because the x-axis passes through your stretch's own starting point. The real GPS track wanders from this line `
+      + `The intercept b is forced close to 0 because the x-axis passes through your stretch's own starting point. The correlation coefficient `
+      + `r = ${r.toFixed(3)} measures how tightly x and y line up on a straight line (r ranges from -1 to 1, with 0 meaning no linear pattern at all); `
+      + `a magnitude this close to ${Math.abs(r) >= 0.7 ? '1' : '0'} is a ${strength} straight-line relationship. The real GPS track wanders from this line `
       + `by only about ${rmseFt.toFixed(1)} feet on average — roughly the size of normal GPS measurement error.`;
     return { built, variables };
   }
 
-  function explainQuadratic(sel, n, a, b, c, r2, rmseFt, dir, compass, originLat, originLon, uMin, uMax) {
+  function explainQuadratic(sel, n, a, b, c, r, rmseFt, dir, compass, originLat, originLon, uMin, uMax) {
     const vertexU = Math.abs(a) > 1e-9 ? -b / (2 * a) : null;
     let vertexTxt = '';
     if (vertexU !== null && vertexU >= uMin && vertexU <= uMax) {
@@ -806,9 +833,10 @@
       + `regression of sideways position y against distance-traveled x gives y = ${a.toFixed(4)}x² ${signedTerm(b)}x ${signedTerm(c)}. `;
     const variables = `The leading coefficient `
       + `a = ${a.toFixed(4)} controls how sharply the road bends — its sign (${a < 0 ? 'negative' : 'positive'}) tells us the road bows to the ${a < 0 ? 'left' : 'right'} `
-      + `of the straight-line chord.${vertexTxt} This quadratic model explains about ${(r2 * 100).toFixed(0)}% of the sideways variation in the path `
-      + `(R² = ${r2.toFixed(2)}), with roughly ${rmseFt.toFixed(0)} feet of typical deviation — real road geometry a single parabola can't fully capture, `
-      + `such as a compound curve, accounts for the rest.`;
+      + `of the straight-line chord.${vertexTxt} A straight line's correlation coefficient r doesn't strictly apply to a curve, so here r instead measures `
+      + `how closely this parabola's predicted path tracks the real one (r = ${r.toFixed(3)}, always between 0 and 1 for this kind of comparison) — `
+      + `it explains about ${(r * r * 100).toFixed(0)}% of the sideways variation in the path, with roughly ${rmseFt.toFixed(0)} feet of typical deviation `
+      + `— real road geometry a single parabola can't fully capture, such as a compound curve, accounts for the rest.`;
     return { built, variables };
   }
 })();
