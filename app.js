@@ -787,16 +787,16 @@
       eqDisplay.innerHTML = `y = ${m.toFixed(4)}x ${signedTerm(b)}`;
       eqMeta.innerHTML = `<span><b>r</b> = ${r.toFixed(3)}</span><span><b>Typical deviation</b> ≈ ${(rmse * 5280).toFixed(1)} ft</span><span><b>Points used</b> = ${fit.n}</span>`;
       const { built, variables } = explainLinear(sel, fit.n, m, b, r, rmse * 5280, dir, compass, originLat, originLon);
-      eqExplain.textContent = built;
-      eqVariables.textContent = variables;
+      eqExplain.innerHTML = built;
+      eqVariables.innerHTML = variables;
     } else {
       const { a, b, c, r, rmse } = fit.quad;
       title.textContent = `Quadratic Equation — Mile ${sel.lo.toFixed(2)} to ${sel.hi.toFixed(2)}`;
       eqDisplay.innerHTML = `y = ${a.toFixed(4)}x² ${signedTerm(b)}x ${signedTerm(c)}`;
       eqMeta.innerHTML = `<span><b>r</b> = ${r.toFixed(3)}</span><span><b>Typical deviation</b> ≈ ${(rmse * 5280).toFixed(1)} ft</span><span><b>Points used</b> = ${fit.n}</span>`;
       const { built, variables } = explainQuadratic(sel, fit.n, a, b, c, r, rmse * 5280, dir, compass, originLat, originLon, uMin, uMax);
-      eqExplain.textContent = built;
-      eqVariables.textContent = variables;
+      eqExplain.innerHTML = built;
+      eqVariables.innerHTML = variables;
     }
 
     equationModal.showModal();
@@ -812,9 +812,9 @@
       + `then rotated that coordinate grid so a new x-axis points along this stretch's own direction of travel: compass heading ${compass.toFixed(0)}° (${dir}), `
       + `starting from the point at (${originLat.toFixed(5)}°, ${originLon.toFixed(5)}°). In that rotated frame, a least-squares linear regression of `
       + `sideways position y against distance-traveled x gives y = ${m.toFixed(4)}x ${signedTerm(b)}. `;
-    const variables = `The slope m = ${m.toFixed(4)} means the path drifts about `
+    const variables = `The <strong>slope</strong> m = ${m.toFixed(4)} means the path drifts about `
       + `${driftFt.toFixed(1)} feet ${m > 0 ? 'left' : 'right'} of straight-ahead for every mile ridden — close to zero, the hallmark of a straight road. `
-      + `The intercept b is forced close to 0 because the x-axis passes through your stretch's own starting point. The correlation coefficient `
+      + `The <strong>intercept</strong> b is forced close to 0 because the x-axis passes through your stretch's own starting point. The correlation coefficient `
       + `r = ${r.toFixed(3)} measures how tightly x and y line up on a straight line (r ranges from -1 to 1, with 0 meaning no linear pattern at all); `
       + `a magnitude this close to ${Math.abs(r) >= 0.7 ? '1' : '0'} is a ${strength} straight-line relationship. The real GPS track wanders from this line `
       + `by only about ${rmseFt.toFixed(1)} feet on average — roughly the size of normal GPS measurement error.`;
@@ -825,13 +825,13 @@
     const vertexU = Math.abs(a) > 1e-9 ? -b / (2 * a) : null;
     let vertexTxt = '';
     if (vertexU !== null && vertexU >= uMin && vertexU <= uMax) {
-      vertexTxt = ` The vertex of this parabola falls at x = ${vertexU.toFixed(3)} miles into your stretch — the point of sharpest turning — confirming the bend is centered inside your selection.`;
+      vertexTxt = ` The <strong>vertex</strong> of this parabola falls at x = ${vertexU.toFixed(3)} miles into your stretch — the point of sharpest turning — confirming the bend is centered inside your selection.`;
     }
     const built = `You highlighted mile ${sel.lo.toFixed(2)} to mile ${sel.hi.toFixed(2)} of the route (${n} recorded GPS points), a stretch dominated by curving road. `
       + `We projected its GPS points into local x-y miles and rotated the frame to point along the chord connecting your stretch's start and end `
       + `(compass heading ${compass.toFixed(0)}°, ${dir}), with the origin at (${originLat.toFixed(5)}°, ${originLon.toFixed(5)}°). A least-squares quadratic `
       + `regression of sideways position y against distance-traveled x gives y = ${a.toFixed(4)}x² ${signedTerm(b)}x ${signedTerm(c)}. `;
-    const variables = `The leading coefficient `
+    const variables = `The <strong>leading coefficient</strong> `
       + `a = ${a.toFixed(4)} controls how sharply the road bends — its sign (${a < 0 ? 'negative' : 'positive'}) tells us the road bows to the ${a < 0 ? 'left' : 'right'} `
       + `of the straight-line chord.${vertexTxt} A straight line's correlation coefficient r doesn't strictly apply to a curve, so here r instead measures `
       + `how closely this parabola's predicted path tracks the real one (r = ${r.toFixed(3)}, always between 0 and 1 for this kind of comparison) — `
